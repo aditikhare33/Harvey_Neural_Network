@@ -42,18 +42,37 @@ def load_data(training_file, verbose, mode = 0):
         
         tweets = list() #equivalent to []
         
+        line_count = 0
         for line in lines:
-            data = line.split(',')
-            tweets.append(data[1])
+            if line_count > 0:
+                data = line.split(',')
+                tweets.append(data[1])
+            line_count += 1
          
-        if verbose:
-            print("printing tweets:\n", tweets)
+       #  if verbose:
+            # print("printing tweets:\n", tweets)
         
         return tweets
             
     elif mode == 1:
-        print("converting tweets into singular words (json style)")
-        return dict()
+        # import pdb; pdb.set_trace()
+        # print("get tweets as the labels given to them")
+        
+        with open(training_file, 'r') as csv_file:
+            lines = csv_file.readlines()
+        
+        tweets = list() #equivalent to []
+        
+        line_count = 0
+        for line in lines:
+            if line_count > 0:
+                data = line.split(',')
+                if data[2].isdigit():
+                    tweets.append(int(data[2]))
+            line_count += 1
+            
+        # print("real_values", tweets)
+        return tweets
     elif mode == 2:
         print("account for thee label a tweet has in its parsing")
         return list()
@@ -67,10 +86,10 @@ def feature_matrix(tweets, verbose):
    
    #stop words to get rid of; common words like "that, there"
    my_stop_words = stop_words.get_stop_words('english')
-   my_stop_words += ['ourselves', 'hers', 'between', 'yourself', 'but', 'again', 'there', 'about', 'once', 'during', 'out', 'very', 'having', 'with', 'they', 'own', 'an', 'be', 'some', 'for', 'do', 'its', 'yours', 'such', 'into', 'of', 'most', 'itself', 'other', 'off', 'is', 's', 'am', 'or', 'who', 'as', 'from', 'him', 'each', 'the', 'themselves', 'until', 'below', 'are', 'we', 'these', 'your', 'his', 'through', 'don', 'nor', 'me', 'were', 'her', 'more', 'himself', 'this', 'down', 'should', 'our', 'their', 'while', 'above', 'both', 'up', 'to', 'ours', 'had', 'she', 'all', 'no', 'when', 'at', 'any', 'before', 'them', 'same', 'and', 'been', 'have', 'in', 'will', 'on', 'does', 'yourselves', 'then', 'that', 'because', 'what', 'over', 'why', 'so', 'can', 'did', 'not', 'now', 'under', 'he', 'you', 'herself', 'has', 'just', 'where', 'too', 'only', 'myself', 'which', 'those', 'i', 'after', 'few', 'whom', 't', 'being', 'if', 'theirs', 'my', 'against', 'a', 'by', 'doing', 'it', 'how', 'further', 'was', 'here', 'than']
+   my_stop_words += ['ourselves', 'hers', 'between', 'yourself', 'but', 'again', 'there', 'about', 'once', 'during', 'out', 'very', 'having', 'with', 'they', 'own', 'an', 'be', 'some', 'for', 'do', 'its', 'yours', 'such', 'into', 'of', 'most', 'itself', 'other', 'off', 'is', 's', 'am', 'or', 'who', 'as', 'from', 'him', 'each', 'the', 'themselves', 'until', 'below', 'are', 'we', 'these', 'your', 'his', 'through', 'don', 'nor', 'me', 'were', 'her', 'more', 'himself', 'this', 'down', 'should', 'our', 'their', 'while', 'above', 'both', 'up', 'to', 'ours', 'had', 'she', 'all', 'no', 'when', 'at', 'any', 'before', 'them', 'same', 'and', 'been', 'have', 'in', 'will', 'on', 'does', 'yourselves', 'then', 'that', 'because', 'what', 'over', 'why', 'so', 'can', 'did', 'not', 'now', 'under', 'he', 'you', 'herself', 'has', 'just', 'where', 'too', 'only', 'myself', 'which', 'those', 'i', 'after', 'few', 'whom', 't', 'being', 'if', 'theirs', 'my', 'against', 'a', 'by', 'doing', 'it', 'how', 'further', 'was', 'here', 'than', 'aren', 'couldn', 'didn', 'doesn', 'hadn', 'hasn', 'haven', 'isn', 'let', 'll', 'mustn', 're', 'shan', 'shouldn', 've', 'wasn', 'weren', 'won', 'wouldn']
 
    
-   print("\n\n\nPrinting stop words\n", my_stop_words)
+   # print("\n\n\nPrinting stop words\n", my_stop_words)
    
     
    #DTM function from scikit
@@ -85,21 +104,98 @@ def feature_matrix(tweets, verbose):
    X = vectorizer.fit_transform(corpus)
    
 
-   print("\n\n\nPrinting feature_names")
-   print(vectorizer.get_feature_names())
-   print("printing feature as an array (to output file)\n")
+   # print("\n\n\nPrinting feature_names")
+   # print(vectorizer.get_feature_names())
+   # print("printing feature as an array (to output file)\n")
    #print(X.toarray())
    
    return X.toarray()
    
+   
+def column_vector(i, training_file):
+    with open(training_file, 'r') as csv_file:
+        lines = csv_file.readlines()
+    
+    column_vector = list() #equivalent to []
+    data = list()
+    
+    
+    line_num = 0;
+    for line in lines:
+        if line_num > 0:
+            data = line.split(',')
+            if data[2].isdigit() and int(data[2]) == i:
+                column_vector.append(1)
+            else:
+                column_vector.append(0)
+        line_num += 1
+        
+    # print("printing column vector for ", i, " :", column_vector)
+    
+    return column_vector
+   
 
-def ordinary_least_squares_regression():
-    print("haha")
+def ordinary_least_squares_regression(DTM_array, training_file, predicting_file):
+    coef = list()
+    # print("printing array: ", DTM_array)
+    predictions = []
+    new_DTM_array = []
+    for i in range(1, 7):
+        reg = linear_model.LinearRegression()
+        fit = reg.fit(DTM_array, column_vector(i, training_file))
+        
+        new_DTM_array = feature_matrix(load_data(predicting_file, False), False)
+        
+        result = reg.predict(new_DTM_array)
+        predictions.append(result)
+        # print("printing topic ", i, "OLS output prediction:", result)
 
+        coef.append(reg.coef_)
+        
+    # print("predictions_len:", len(predictions[0]),
+    #       "num_tweets:", len(load_data(predicting_file, False, 1)))
+    OLS_predict(predictions, len(new_DTM_array), training_file)
+        
+    # print("printing ordinary least squares coefficients: ", coef)
+    
+    # print("prining coef length", len(coef[0]))
+    # print("printing #DTM rows", len(DTM_array))
+    # print("printing #DTM cols", len(DTM_array[0]))
+    
+def OLS_predict(predictions_pre, num_tweets, predicting_file):
+    predictions = []
+    
+    for element in range(0, num_tweets):
+        curr_prediction = 1
+        curr_value = abs(predictions_pre[0][element])
+        for i in range(1, 6):
+            if abs(1 - abs(predictions_pre[i][element])) < abs(1 - curr_value):
+                curr_prediction = i + 1
+                curr_value = abs(predictions_pre[i][element])
+                
+        predictions.append(curr_prediction)
+    
+    real_values = load_data(predicting_file, False, 1)
+    # print("printing real_values", real_values)
+        
+    inacc_count = 0
+    #print("len(real_values)", len(real_values) , "len(predictions):", len(predictions))
+    for i in range(0, num_tweets):
+        #print("real_value", real_values[i], "predicted_value:", predictions[i])
+        #print("options_to_choose_from", predictions_pre[0][i], predictions_pre[1][i],
+               #predictions_pre[2][i], predictions_pre[3][i], predictions_pre[4][i], predictions_pre[5][i])
+        if real_values[i] != predictions[i]:
+            # print(real_values[i], predictions[i])
+            inacc_count += 1
+                
+    print("fraction prediction tags correct =", 1 - inacc_count/num_tweets)
+    
+    print("percent prediction tags correct =", 100 - ((inacc_count/num_tweets) * 100.0000000))
+        
+            
 def categorical_naive_bayes():
     print("haha")
     
-
     
 """
 Binary variable: ex: politics yes or None
@@ -132,6 +228,20 @@ Binary variable: ex: politics yes or None
         column vectors for each  (6 columns, n tweets rows, nbig array)
         
         regression line: take one of the columns in the array and regress by DTM
+        
+        
+    Using Linear Regression to predict
+        predict what the column vectors
+        will return
+        
+        absolute_value(coef) closer to 0 = that column tag less correlated to that feature
+        coef closer to 1
+        
+    Gaussian continuous (like how OLS)
+    Benoulli: Linear model
+    Catgorical with ranking
+    
+    USE: multinomial, don't know ranking
 """
 @click.command()
 @click.argument('training_file', type=click.Path(exists=True))
@@ -156,9 +266,15 @@ def main(training_file, predicting_file, verbose):
         
     elif userInput == '1':
         print("starting ordinary least squares model")
-        load_data()
-        ordinary_least_squares_regression()
-    elif userInput == '2':
+        verbose = False
+        array = feature_matrix(load_data(training_file, verbose), verbose)
+        
+        filestream = open(str(training_file) + "DTM_output_file.txt", "w+")
+        filestream.write(str(array))
+        filestream.close()
+        
+        ordinary_least_squares_regression(array, training_file, predicting_file)
+    elif userInput == '1':
         print("starting categorical naive bayes")
         load_data()
         categorical_naive_bayes()
