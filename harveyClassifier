@@ -1,0 +1,40 @@
+# stop on errors
+set -Eeuo pipefail
+
+# Parse argument. $1 is the first argument
+case $1 in
+	"nomisc")
+
+         echo "THERE ARE 2 LARGE DATA FILES, lets call them a and b"
+
+         echo "A WITH ITSELF"
+		 python3 -W ignore __main__.py training_data_large.csv training_data_large.csv
+
+         echo "B WITH ITSELF"
+         python3 -W ignore __main__.py training_data_large2.csv training_data_large2.csv
+
+
+
+
+         echo "NOW WE WILL DO FILES WITH OTHER FILES"
+
+         echo "A training, B predicted"
+         python3 -W ignore __main__.py training_data_large.csv training_data_large2.csv
+
+         echo "B training, A predicted"
+         python3 -W ignore __main__.py training_data_large2.csv training_data_large.csv
+
+
+        
+
+	;;
+
+	"with misc")
+         python3 -W ignore __main__.py training_data_large.csv training_data_large.csv
+         2
+    ;;
+*)
+    usage
+    exit 1
+    ;;
+esac
