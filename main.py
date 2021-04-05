@@ -11,6 +11,8 @@ import sklearn
 from sklearn.feature_extraction.text import CountVectorizer #for creating DTM (Document Term Matrix)
 from sklearn import linear_model
 from sklearn.naive_bayes import CategoricalNB
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.naive_bayes import BernoulliNB
 
 import stop_words #for specific words we dont need in DTM
 
@@ -39,7 +41,8 @@ def load_data(training_file, verbose, mode = 0):
         for line in lines:
             if line_count > 0:
                 data = line.split(',')
-                tweets.append(data[1])
+                if data[2].isdigit():
+                    tweets.append(data[1])
             line_count += 1
         return tweets
             
@@ -57,8 +60,6 @@ def load_data(training_file, verbose, mode = 0):
                 data = line.split(',')
                 if data[2].isdigit():
                     tweets.append(int(data[2]))
-                else:
-                    tweets.append(6)
             line_count += 1
         
         return tweets
@@ -121,12 +122,16 @@ def ordinary_least_squares_regression(DTM_array, training_file, predicting_file)
         # print("printing topic ", i, "OLS output prediction:", result)
         coef.append(reg.coef_)
  
-    model_predict(predictions, len(new_DTM_array), predicting_file)
+    model_predict_categorical(predictions, len(new_DTM_array), predicting_file)
         
-            
+        
+# CHANGE CATEGORICAL to MULTINOMIAL
+# BERNOULLI, 6 BINARY COLUMN VECTORS SEPARATELY (<--- should be similar to LINEAR LOGISTIC REGRESSION)
+# MULTINOMIAL, 1 COLUMN VECTOR, probability for all 6 categories
+#first thing to think about is how is the target measuesured
+
 def categorical_naive_bayes(DTM_array, training_file, predicting_file):
     coef = list()
-    # print("printing array: ", DTM_array)
     
     predictions = []
     new_DTM_array = []
@@ -139,10 +144,27 @@ def categorical_naive_bayes(DTM_array, training_file, predicting_file):
         # print("printing topic ", i, "OLS output prediction:", result)
         coef.append(clf.coef_)
 
-    model_predict(predictions, len(new_DTM_array), predicting_file)
-        
-def model_predict(predictions_pre, num_tweets, predicting_file):
-    print("beginning predictions")
+    model_predict_categorical(predictions, len(new_DTM_array), predicting_file)
+    
+def multinomial_naive_bayes(DTM_array, training_file, predicting_file):
+    clf = MultinomialNB()
+    clf.fit(DTM_array, load_data(training_file, False, 1))
+    new_DTM_array = feature_matrix(load_data(predicting_file, False), False)
+    predictions = clf.predict(new_DTM_array)
+    real_values = load_data(predicting_file, False, 1)
+    model_accuracy(len(new_DTM_array), real_values, predictions)
+    
+def bernoulli_naive_bayes(DTM_array, training_file, predicting_file):
+    clf = BernoulliNB()
+    clf.fit(DTM_array, load_data(training_file, False, 1))
+    new_DTM_array = feature_matrix(load_data(predicting_file, False), False)
+    predictions = clf.predict(new_DTM_array)
+    real_values = load_data(predicting_file, False, 1)
+    model_accuracy(len(new_DTM_array), real_values, predictions)
+    
+    
+# OLS and categorical naive bayes predictions
+def model_predict_categorical(predictions_pre, num_tweets, predicting_file):
     predictions = []
 
     for element in range(0, num_tweets):
@@ -161,20 +183,43 @@ def model_predict(predictions_pre, num_tweets, predicting_file):
     model_accuracy(num_tweets, real_values, predictions)
     
 def model_accuracy(num_tweets, real_values, predictions):
+    print("beginning predictions")
+    
     inacc_count = 0
-    #print("len(real_values)", len(real_values) , "len(predictions):", len(predictions))
+    
     adjusted_num_tweets = num_tweets
+    adjusted_inacc_count = 0
+    
+    num_clim_change = 0
+    inacc_clim_change = 0
     for i in range(0, num_tweets):
-        #print("real_value", real_values[i], "predicted_value:", predictions[i])
-        #print("options_to_choose_from", predictions_pre[0][i], predictions_pre[1][i],
-               #predictions_pre[2][i], predictions_pre[3][i], predictions_pre[4][i], predictions_pre[5][i])
+        if real_values[i] != predictions[i]:
+            inacc_count += 1
+    
         if real_values[i] == 6:
             adjusted_num_tweets -= 1
         elif real_values[i] != predictions[i]:
-            inacc_count += 1
-    print(adjusted_num_tweets)
-    print("fraction prediction tags correct =", 1 - inacc_count/adjusted_num_tweets)
-    print("percent prediction tags correct =", 100 - ((inacc_count/adjusted_num_tweets) * 100.0000000))
+            adjusted_inacc_count += 1
+        
+        if predictions[i] == 5 or predictions[i] == 1: #if tweet predicted to be abt climate change or Harvey
+            num_clim_change += 1
+            if (real_values[i] != 1 and real_values[i] != 5):
+                inacc_clim_change += 1
+            
+    print("num_tweets on clim_change: ", num_clim_change)
+    print("percent prediction tags (clim_change) correct =", 100 - ((inacc_clim_change/num_clim_change) * 100.0000000))
+    
+    print("\n")
+    
+    print("adjusted_num_tweets: ", adjusted_num_tweets)
+    print("percent prediction tags (non_misc) correct =", 100 - ((adjusted_inacc_count/adjusted_num_tweets) * 100.0000000))
+    
+    print("\n")
+    
+    print("total num_tweets: ", num_tweets)
+    print("percent prediction tags (non_misc) correct =", 100 - ((inacc_count/num_tweets) * 100.0000000))
+    
+    print("\n")
         
 
 @click.command()
@@ -188,7 +233,9 @@ def main(training_file, predicting_file, verbose):
                        "(0) feature matrix\n"
                        "(1) ordinary least squares\n"
                        "(2) categorical naive bayes\n"
-                       "(3) exit\n")
+                       "(3) multinomial naive bayes\n"
+                       "(4) bernoulli naive bayes"
+                       "(5) exit\n")
     if userInput == '0':
         print("building feature matrix")
         array = feature_matrix(load_data(training_file, verbose), verbose)
@@ -206,6 +253,14 @@ def main(training_file, predicting_file, verbose):
         print("starting categorical naive bayes")
         array = feature_matrix(load_data(training_file, verbose), verbose)
         categorical_naive_bayes(array, training_file, predicting_file)
+    elif userInput == '3':
+        print("starting multinomial naive bayes")
+        array = feature_matrix(load_data(training_file, verbose), verbose)
+        multinomial_naive_bayes(array, training_file, predicting_file)
+    elif userInput == '4':
+        print("starting bernoulli naive bayes")
+        array = feature_matrix(load_data(training_file, verbose), verbose)
+        bernoulli_naive_bayes(array, training_file, predicting_file)
     else:
         print("exiting")
         exit()
@@ -213,4 +268,3 @@ def main(training_file, predicting_file, verbose):
 # This is how python tells if the file is being run as main
 if __name__ == '__main__':
     main()
-
